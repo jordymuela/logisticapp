@@ -11,40 +11,43 @@ import { StatusTimeline } from '@/components/status-timeline';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { distanceKm } from '@/domain/pricing';
+import { useI18n } from '@/i18n';
+import type { StringKey } from '@/i18n/strings';
 import { useStore } from '@/store/app-store';
-import { LOAD_STATUS, formatDate, formatUSD } from '@/utils/format';
+import { LOAD_STATUS_COLOR, formatDate, formatUSD } from '@/utils/format';
 
 export default function LoadDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { loadById, carrierById, role, activeCarrier, dispatch } = useStore();
+  const { t, lang } = useI18n();
   const load = loadById(id);
 
   if (!load) {
     return (
       <Screen inStack>
-        <ThemedText themeColor="textSecondary">Chargement introuvable.</ThemedText>
+        <ThemedText themeColor="textSecondary">{t('notFoundLoad')}</ThemedText>
       </Screen>
     );
   }
 
-  const status = LOAD_STATUS[load.status];
   const carrier = carrierById(load.carrierId);
   const isMyMission = role === 'carrier' && load.carrierId === activeCarrier.id;
+  const loadId = load.id;
 
   function reject() {
-    Alert.alert('Motif du rejet', 'Choisissez un motif', [
-      { text: 'Documents incomplets', onPress: () => dispatch({ type: 'rejectLoad', id: load!.id, reason: 'documents incomplets' }) },
-      { text: 'Valeur déclarée incohérente', onPress: () => dispatch({ type: 'rejectLoad', id: load!.id, reason: 'valeur déclarée incohérente' }) },
-      { text: 'Annuler', style: 'cancel' },
+    Alert.alert(t('rejectReasonTitle'), t('chooseReason'), [
+      { text: t('reasonDocsIncomplete'), onPress: () => dispatch({ type: 'rejectLoad', id: loadId, reason: 'reasonDocsIncomplete' }) },
+      { text: t('reasonValueInconsistent'), onPress: () => dispatch({ type: 'rejectLoad', id: loadId, reason: 'reasonValueInconsistent' }) },
+      { text: t('cancel'), style: 'cancel' },
     ]);
   }
 
   function accept() {
     if (activeCarrier.status !== 'approuve') {
-      Alert.alert('Dossier non approuvé', 'Votre dossier doit être approuvé par l\'administrateur avant d\'accepter une mission.');
+      Alert.alert(t('notApprovedTitle'), t('notApprovedMsg'));
       return;
     }
-    dispatch({ type: 'acceptMission', id: load!.id, carrierId: activeCarrier.id });
+    dispatch({ type: 'acceptMission', id: loadId, carrierId: activeCarrier.id });
   }
 
   return (
@@ -53,21 +56,21 @@ export default function LoadDetail() {
       <Card>
         <View style={styles.top}>
           <ThemedText type="code" themeColor="textSecondary">{load.reference}</ThemedText>
-          <Badge label={status.label} color={status.color} />
+          <Badge label={t(`status_${load.status}` as StringKey)} color={LOAD_STATUS_COLOR[load.status]} />
         </View>
         <ThemedText style={styles.route}>
           {load.origin} → {load.destination}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          {distanceKm(load.origin, load.destination).toLocaleString('fr-FR')} km indicatifs · expéditeur {load.shipperName}
+          {t('kmIndicative', { km: distanceKm(load.origin, load.destination).toLocaleString(lang === 'pt' ? 'pt-PT' : 'fr-FR'), shipper: load.shipperName })}
         </ThemedText>
         <View style={styles.grid}>
-          <Cell label="Cargaison" value={load.cargoType} />
-          <Cell label="Poids" value={`${load.weightT} t`} />
-          <Cell label="Volume" value={`${load.volumeM3} m³`} />
-          <Cell label="Valeur déclarée" value={formatUSD(load.estimatedValue)} />
-          <Cell label="Assurance" value={load.insured ? 'Souscrite' : 'Non'} />
-          <Cell label="Échéance" value={formatDate(load.deadline)} />
+          <Cell label={t('cargo')} value={load.cargoType} />
+          <Cell label={t('weight')} value={`${load.weightT} t`} />
+          <Cell label={t('volume')} value={`${load.volumeM3} m³`} />
+          <Cell label={t('declaredValue')} value={formatUSD(load.estimatedValue, lang)} />
+          <Cell label={t('insurance')} value={load.insured ? t('subscribed') : t('no')} />
+          <Cell label={t('deadline')} value={formatDate(load.deadline, lang)} />
         </View>
         <ThemedText type="small">{load.description}</ThemedText>
       </Card>
@@ -76,42 +79,42 @@ export default function LoadDetail() {
 
       {carrier ? (
         <>
-          <SectionHeader title="Camion assigné" />
+          <SectionHeader title={t('assignedTruck')} />
           <Card onPress={() => router.push(`/carrier/${carrier.id}`)}>
             <ThemedText type="smallBold">{carrier.company}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               {carrier.truckType} · {carrier.truckPlate}
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              Chauffeur {carrier.driverName} · {carrier.driverPhone}
+              {t('driverLine', { name: carrier.driverName, phone: carrier.driverPhone })}
             </ThemedText>
           </Card>
         </>
       ) : null}
 
-      <SectionHeader title="Suivi" />
+      <SectionHeader title={t('tracking')} />
       <Card>
         <StatusTimeline load={load} />
       </Card>
 
       {role === 'admin' && load.status === 'en_attente' ? (
         <View style={styles.actions}>
-          <Button title="Valider et publier" onPress={() => dispatch({ type: 'validateLoad', id: load.id })} />
-          <Button title="Rejeter" variant="danger" onPress={reject} />
+          <Button title={t('validateAndPublish')} onPress={() => dispatch({ type: 'validateLoad', id: loadId })} />
+          <Button title={t('reject')} variant="danger" onPress={reject} />
         </View>
       ) : null}
       {role === 'carrier' && load.status === 'valide' ? (
-        <Button title={`Accepter la mission · ${formatUSD(load.truckPrice)}`} onPress={accept} />
+        <Button title={t('acceptMission', { price: formatUSD(load.truckPrice, lang) })} onPress={accept} />
       ) : null}
       {isMyMission && load.status === 'assigne' ? (
-        <Button title="Démarrer le transport" onPress={() => dispatch({ type: 'startTransit', id: load.id })} />
+        <Button title={t('startTransport')} onPress={() => dispatch({ type: 'startTransit', id: loadId })} />
       ) : null}
       {isMyMission && load.status === 'en_transit' ? (
-        <Button title="Confirmer la livraison" onPress={() => dispatch({ type: 'confirmDelivery', id: load.id })} />
+        <Button title={t('confirmDelivery')} onPress={() => dispatch({ type: 'confirmDelivery', id: loadId })} />
       ) : null}
       {role === 'shipper' && load.status === 'en_attente' ? (
         <ThemedText type="small" themeColor="textSecondary" style={{ textAlign: 'center' }}>
-          En attente de la revue de conformité par l’administrateur.
+          {t('waitingReview')}
         </ThemedText>
       ) : null}
     </Screen>

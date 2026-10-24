@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
@@ -11,48 +12,60 @@ import { SectionHeader } from '@/components/section-header';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import type { DocKey } from '@/domain/types';
+import { useI18n } from '@/i18n';
+import type { StringKey } from '@/i18n/strings';
+import { uploadDocumentImage } from '@/services/storage';
 import { useStore } from '@/store/app-store';
-import { CARRIER_STATUS } from '@/utils/format';
+import { CARRIER_STATUS_COLOR } from '@/utils/format';
 import { pickDocumentImage } from '@/utils/pick-document';
 
 export default function Fleet() {
   const { activeCarrier: c, dispatch } = useStore();
-  const status = CARRIER_STATUS[c.status];
+  const { t } = useI18n();
+  const [busy, setBusy] = useState<DocKey | null>(null);
 
   async function upload(key: DocKey) {
-    const uri = await pickDocumentImage();
-    if (uri) dispatch({ type: 'setCarrierDoc', carrierId: c.id, key, uri });
+    const local = await pickDocumentImage(t);
+    if (!local) return;
+    setBusy(key);
+    try {
+      const uri = await uploadDocumentImage(local, c.id, key);
+      dispatch({ type: 'setCarrierDoc', carrierId: c.id, key, uri });
+    } catch {
+      Alert.alert(t('uploadFailed'));
+    } finally {
+      setBusy(null);
+    }
   }
 
   return (
-    <Screen title="Mon camion" subtitle={c.company}>
+    <Screen title={t('myTruck')} subtitle={c.company}>
       <Card>
         <View style={styles.top}>
           <ThemedText style={styles.plate}>{c.truckPlate}</ThemedText>
-          <Badge label={status.label} color={status.color} />
+          <Badge label={t(`carrier_${c.status}` as StringKey)} color={CARRIER_STATUS_COLOR[c.status]} />
         </View>
         <ThemedText type="small" themeColor="textSecondary">
-          {c.truckType} · {c.capacityT} t · base {c.base}
+          {c.truckType} · {c.capacityT} t · {t('baseLine', { base: c.base })}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          Chauffeur {c.driverName} · {c.driverPhone}
+          {t('driverLine', { name: c.driverName, phone: c.driverPhone })}
         </ThemedText>
       </Card>
-      <SectionHeader title="Documents de conformité" />
+      <SectionHeader title={t('complianceDocs')} />
       <Card style={{ gap: 0 }}>
         {c.docs.map((d) => (
           <DocRow
             key={d.key}
             doc={d}
-            actionLabel={d.status === 'verifie' ? undefined : d.uri ? 'Remplacer' : 'Téléverser'}
+            busy={busy === d.key}
+            actionLabel={d.status === 'verifie' ? undefined : d.uri ? t('replace') : t('upload')}
             onAction={() => upload(d.key)}
           />
         ))}
       </Card>
-      <ThemedText type="small" themeColor="textSecondary">
-        AFEGEME et carte rose concernent le camion, DGM et permis concernent le chauffeur. L’administrateur vérifie chaque document avant approbation.
-      </ThemedText>
-      <Button title="Inscrire un autre camion" variant="secondary" onPress={() => router.push('/register-truck')} />
+      <ThemedText type="small" themeColor="textSecondary">{t('docsHint')}</ThemedText>
+      <Button title={t('registerAnother')} variant="secondary" onPress={() => router.push('/register-truck')} />
       <RoleFooter />
     </Screen>
   );

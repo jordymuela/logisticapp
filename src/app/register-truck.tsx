@@ -12,11 +12,15 @@ import { SectionHeader } from '@/components/section-header';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { DOC_TEMPLATES, HUBS, TRUCK_TYPES, type DocKey, type Hub, type TruckType } from '@/domain/types';
+import { useI18n } from '@/i18n';
+import { uploadDocumentImage } from '@/services/storage';
 import { useStore } from '@/store/app-store';
 import { pickDocumentImage } from '@/utils/pick-document';
 
 export default function RegisterTruck() {
   const { dispatch } = useStore();
+  const { t } = useI18n();
+  const [carrierId] = useState(() => `c${Date.now()}`);
   const [company, setCompany] = useState('');
   const [phone, setPhone] = useState('+243 ');
   const [base, setBase] = useState<Hub | null>('Lubumbashi');
@@ -26,12 +30,22 @@ export default function RegisterTruck() {
   const [driverName, setDriverName] = useState('');
   const [driverPhone, setDriverPhone] = useState('+243 ');
   const [docUris, setDocUris] = useState<Partial<Record<DocKey, string>>>({});
+  const [busy, setBusy] = useState<DocKey | null>(null);
 
   const canSubmit = company.trim() && base && truckType && truckPlate.trim() && driverName.trim();
 
   async function upload(key: DocKey) {
-    const uri = await pickDocumentImage();
-    if (uri) setDocUris((d) => ({ ...d, [key]: uri }));
+    const local = await pickDocumentImage(t);
+    if (!local) return;
+    setBusy(key);
+    try {
+      const uri = await uploadDocumentImage(local, carrierId, key);
+      setDocUris((d) => ({ ...d, [key]: uri }));
+    } catch {
+      Alert.alert(t('uploadFailed'));
+    } finally {
+      setBusy(null);
+    }
   }
 
   function submit() {
@@ -39,6 +53,7 @@ export default function RegisterTruck() {
     dispatch({
       type: 'registerCarrier',
       input: {
+        id: carrierId,
         company: company.trim(),
         phone,
         base,
@@ -50,44 +65,41 @@ export default function RegisterTruck() {
         docUris,
       },
     });
-    Alert.alert('Dossier soumis', 'Votre dossier est transmis à l\'administrateur pour vérification des documents.', [
-      { text: 'OK', onPress: () => router.back() },
-    ]);
+    Alert.alert(t('fileSubmittedTitle'), t('fileSubmittedMsg'), [{ text: t('ok'), onPress: () => router.back() }]);
   }
 
   return (
-    <Screen inStack title="Inscription" subtitle="Propriétaire de camion et chauffeur">
-      <FormField label="Nom de l'entreprise" placeholder="ex. Transports Kalonji" value={company} onChangeText={setCompany} />
-      <FormField label="Téléphone" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
-      <ChipSelect label="Base d'opération" options={HUBS} value={base} onChange={setBase} />
-      <SectionHeader title="Camion" />
-      <ChipSelect label="Type de camion" options={TRUCK_TYPES} value={truckType} onChange={setTruckType} />
+    <Screen inStack title={t('registration')} subtitle={t('registrationSubtitle')}>
+      <FormField label={t('companyName')} placeholder={t('companyPlaceholder')} value={company} onChangeText={setCompany} />
+      <FormField label={t('phone')} keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+      <ChipSelect label={t('operatingBase')} options={HUBS} value={base} onChange={setBase} />
+      <SectionHeader title={t('truckSection')} />
+      <ChipSelect label={t('truckType')} options={TRUCK_TYPES} value={truckType} onChange={setTruckType} />
       <View style={styles.row}>
         <View style={styles.half}>
-          <FormField label="Immatriculation" placeholder="HK 0000 AB" autoCapitalize="characters" value={truckPlate} onChangeText={setTruckPlate} />
+          <FormField label={t('plate')} placeholder="HK 0000 AB" autoCapitalize="characters" value={truckPlate} onChangeText={setTruckPlate} />
         </View>
         <View style={styles.half}>
-          <FormField label="Capacité (t)" keyboardType="number-pad" value={capacityT} onChangeText={setCapacityT} />
+          <FormField label={t('capacity')} keyboardType="number-pad" value={capacityT} onChangeText={setCapacityT} />
         </View>
       </View>
-      <SectionHeader title="Chauffeur" />
-      <FormField label="Nom du chauffeur" value={driverName} onChangeText={setDriverName} />
-      <FormField label="Téléphone du chauffeur" keyboardType="phone-pad" value={driverPhone} onChangeText={setDriverPhone} />
-      <SectionHeader title="Documents" />
+      <SectionHeader title={t('driverSection')} />
+      <FormField label={t('driverName')} value={driverName} onChangeText={setDriverName} />
+      <FormField label={t('driverPhoneField')} keyboardType="phone-pad" value={driverPhone} onChangeText={setDriverPhone} />
+      <SectionHeader title={t('documents')} />
       <Card style={{ gap: 0 }}>
-        {DOC_TEMPLATES.map((t) => (
+        {DOC_TEMPLATES.map((d) => (
           <DocRow
-            key={t.key}
-            doc={{ ...t, status: docUris[t.key] ? 'televerse' : 'manquant', uri: docUris[t.key] }}
-            actionLabel={docUris[t.key] ? 'Remplacer' : 'Téléverser'}
-            onAction={() => upload(t.key)}
+            key={d.key}
+            doc={{ ...d, status: docUris[d.key] ? 'televerse' : 'manquant', uri: docUris[d.key] }}
+            busy={busy === d.key}
+            actionLabel={docUris[d.key] ? t('replace') : t('upload')}
+            onAction={() => upload(d.key)}
           />
         ))}
       </Card>
-      <ThemedText type="small" themeColor="textSecondary">
-        Vous pouvez soumettre sans tous les documents : le dossier restera en attente jusqu’à ce qu’ils soient fournis et vérifiés.
-      </ThemedText>
-      <Button title="Soumettre le dossier" onPress={submit} disabled={!canSubmit} />
+      <ThemedText type="small" themeColor="textSecondary">{t('submitWithoutDocsHint')}</ThemedText>
+      <Button title={t('submitFile')} onPress={submit} disabled={!canSubmit} />
     </Screen>
   );
 }

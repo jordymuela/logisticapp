@@ -2,16 +2,23 @@ import { router } from 'expo-router';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { LangToggle } from '@/components/lang-toggle';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { useI18n } from '@/i18n';
 import { useStore } from '@/store/app-store';
 
 export function RoleFooter() {
-  const { dispatch } = useStore();
+  const { dispatch, syncStatus } = useStore();
+  const { t } = useI18n();
   return (
     <View style={styles.wrap}>
+      <View style={styles.langRow}>
+        <ThemedText type="smallBold" themeColor="textSecondary">{t('language')}</ThemedText>
+        <LangToggle />
+      </View>
       <Button
-        title="Changer de rôle"
+        title={t('changeRole')}
         variant="ghost"
         onPress={() => {
           dispatch({ type: 'setRole', role: null });
@@ -19,17 +26,20 @@ export function RoleFooter() {
         }}
       />
       <Button
-        title="Réinitialiser la démo"
+        title={t('resetDemo')}
         variant="ghost"
         onPress={() =>
-          Alert.alert('Réinitialiser', 'Les données de démonstration seront restaurées.', [
-            { text: 'Annuler', style: 'cancel' },
-            { text: 'Réinitialiser', style: 'destructive', onPress: () => dispatch({ type: 'reset' }) },
+          Alert.alert(t('resetTitle'), t('resetMsg'), [
+            { text: t('cancel'), style: 'cancel' },
+            { text: t('resetTitle'), style: 'destructive', onPress: () => dispatch({ type: 'reset' }) },
           ])
         }
       />
       <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
-        Démo · données fictives · aucun paiement réel
+        {t('demoNote')}
+      </ThemedText>
+      <ThemedText type="small" themeColor={syncStatus === 'error' ? 'danger' : 'textSecondary'} style={styles.note}>
+        {syncStatus === 'live' || syncStatus === 'loading' ? t('cloudConnected') : t('cloudOffline')}
       </ThemedText>
     </View>
   );
@@ -37,5 +47,6 @@ export function RoleFooter() {
 
 const styles = StyleSheet.create({
   wrap: { gap: Spacing.two, marginTop: Spacing.three },
+  langRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.one },
   note: { textAlign: 'center' },
 });

@@ -27,7 +27,6 @@ export type DocStatus = 'manquant' | 'televerse' | 'verifie' | 'rejete';
 
 export interface Doc {
   key: DocKey;
-  label: string;
   owner: DocOwner;
   status: DocStatus;
   expiry?: string;
@@ -52,9 +51,13 @@ export interface Carrier {
   note?: string;
 }
 
+export type EventKey = 'declared' | 'validated' | 'accepted' | 'enroute' | 'delivered' | 'rejected';
+
 export interface TimelineEvent {
   at: string;
-  label: string;
+  key: EventKey;
+  /** Free text attached to the event, e.g. a rejection reason. */
+  detail?: string;
 }
 
 export interface Load {
@@ -90,9 +93,9 @@ export interface Shipper {
 }
 
 export const DOC_TEMPLATES: Omit<Doc, 'status' | 'uri' | 'expiry'>[] = [
-  { key: 'afegeme', label: 'Certificat AFEGEME', owner: 'camion' },
-  { key: 'carte_rose', label: 'Carte rose (immatriculation)', owner: 'camion' },
-  { key: 'assurance', label: 'Assurance du camion', owner: 'camion' },
-  { key: 'dgm', label: 'Attestation DGM', owner: 'chauffeur' },
-  { key: 'permis', label: 'Permis de conduire', owner: 'chauffeur' },
+  { key: 'afegeme', owner: 'camion' },
+  { key: 'carte_rose', owner: 'camion' },
+  { key: 'assurance', owner: 'camion' },
+  { key: 'dgm', owner: 'chauffeur' },
+  { key: 'permis', owner: 'chauffeur' },
 ];

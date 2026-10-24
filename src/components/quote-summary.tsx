@@ -4,6 +4,7 @@ import { Card } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useI18n } from '@/i18n';
 import { formatUSD } from '@/utils/format';
 
 interface Props {
@@ -15,19 +16,20 @@ interface Props {
 
 export function QuoteSummary({ truckPrice, adminFee, insurancePremium, insured }: Props) {
   const theme = useTheme();
+  const { t, lang } = useI18n();
   const total = truckPrice + adminFee + insurancePremium;
   return (
     <Card>
       <ThemedText type="smallBold" themeColor="textSecondary" style={{ textTransform: 'uppercase', letterSpacing: 0.6 }}>
-        Devis
+        {t('quote')}
       </ThemedText>
-      <Row label="Prix camion (transporteur)" value={formatUSD(truckPrice)} />
-      <Row label="Supplément de gestion (plateforme)" value={formatUSD(adminFee)} />
-      <Row label={insured ? 'Prime d\'assurance (assureur partenaire)' : 'Assurance non souscrite'} value={insured ? formatUSD(insurancePremium) : '—'} />
+      <Row label={t('truckPriceRow')} value={formatUSD(truckPrice, lang)} />
+      <Row label={t('adminFeeRow')} value={formatUSD(adminFee, lang)} />
+      <Row label={insured ? t('premiumRow') : t('noInsuranceRow')} value={insured ? formatUSD(insurancePremium, lang) : '—'} />
       <View style={[styles.divider, { backgroundColor: theme.border }]} />
       <View style={styles.row}>
-        <ThemedText type="smallBold">Devis total</ThemedText>
-        <ThemedText style={styles.total}>{formatUSD(total)}</ThemedText>
+        <ThemedText type="smallBold">{t('quoteTotal')}</ThemedText>
+        <ThemedText style={styles.total}>{formatUSD(total, lang)}</ThemedText>
       </View>
     </Card>
   );

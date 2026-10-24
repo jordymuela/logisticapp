@@ -110,14 +110,14 @@ interface LoadInput {
 
 function makeLoad(i: LoadInput): Load {
   const truckPrice = estimateTruckPrice(i.origin, i.destination, i.weightT);
-  const events: Load['events'] = [{ at: daysAgo(i.ageDays), label: 'Chargement déclaré par l\'expéditeur' }];
+  const events: Load['events'] = [{ at: daysAgo(i.ageDays), key: 'declared' }];
   const order: Load['status'][] = ['en_attente', 'valide', 'assigne', 'en_transit', 'livre'];
   const idx = order.indexOf(i.status);
-  if (idx >= 1) events.push({ at: daysAgo(i.ageDays - 1, 11), label: 'Validé par l\'administrateur' });
-  if (idx >= 2) events.push({ at: daysAgo(i.ageDays - 1, 15), label: 'Mission acceptée par le transporteur' });
-  if (idx >= 3) events.push({ at: daysAgo(i.ageDays - 2, 6), label: 'Camion en route' });
-  if (idx >= 4) events.push({ at: daysAgo(0, 14), label: 'Livraison confirmée' });
-  if (i.status === 'rejete') events.push({ at: daysAgo(i.ageDays - 1, 10), label: 'Rejeté : valeur déclarée incohérente' });
+  if (idx >= 1) events.push({ at: daysAgo(i.ageDays - 1, 11), key: 'validated' });
+  if (idx >= 2) events.push({ at: daysAgo(i.ageDays - 1, 15), key: 'accepted' });
+  if (idx >= 3) events.push({ at: daysAgo(i.ageDays - 2, 6), key: 'enroute' });
+  if (idx >= 4) events.push({ at: daysAgo(0, 14), key: 'delivered' });
+  if (i.status === 'rejete') events.push({ at: daysAgo(i.ageDays - 1, 10), key: 'rejected', detail: 'reasonValueInconsistent' });
   return {
     id: i.id,
     reference: `LOAD-2026-${String(i.n).padStart(4, '0')}`,

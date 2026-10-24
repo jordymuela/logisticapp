@@ -1,6 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Alert } from 'react-native';
 
+import type { Translate } from '@/i18n';
+
 async function fromLibrary(): Promise<string | null> {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) return null;
@@ -18,12 +20,12 @@ async function fromCamera(): Promise<string | null> {
 }
 
 /** Lets the user photograph or pick a document image. Resolves to a local URI or null when cancelled. */
-export function pickDocumentImage(): Promise<string | null> {
+export function pickDocumentImage(t: Translate): Promise<string | null> {
   return new Promise((resolve) => {
-    Alert.alert('Ajouter le document', 'Choisissez la source', [
-      { text: 'Prendre une photo', onPress: () => fromCamera().then(resolve) },
-      { text: 'Galerie', onPress: () => fromLibrary().then(resolve) },
-      { text: 'Annuler', style: 'cancel', onPress: () => resolve(null) },
+    Alert.alert(t('addDocument'), t('chooseSource'), [
+      { text: t('takePhoto'), onPress: () => fromCamera().then(resolve) },
+      { text: t('gallery'), onPress: () => fromLibrary().then(resolve) },
+      { text: t('cancel'), style: 'cancel', onPress: () => resolve(null) },
     ]);
   });
 }

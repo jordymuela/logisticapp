@@ -1,44 +1,48 @@
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { Badge } from '@/components/badge';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import type { Doc } from '@/domain/types';
 import { useTheme } from '@/hooks/use-theme';
-import { DOC_STATUS, formatDate } from '@/utils/format';
+import { useI18n } from '@/i18n';
+import type { StringKey } from '@/i18n/strings';
+import { DOC_STATUS_COLOR, formatDate } from '@/utils/format';
 
 interface Props {
   doc: Doc;
+  busy?: boolean;
   actionLabel?: string;
   onAction?: () => void;
   secondaryLabel?: string;
   onSecondary?: () => void;
 }
 
-export function DocRow({ doc, actionLabel, onAction, secondaryLabel, onSecondary }: Props) {
+export function DocRow({ doc, busy, actionLabel, onAction, secondaryLabel, onSecondary }: Props) {
   const theme = useTheme();
-  const status = DOC_STATUS[doc.status];
+  const { t, lang } = useI18n();
   return (
     <View style={[styles.row, { borderColor: theme.border }]}>
       <View style={[styles.thumb, { backgroundColor: theme.backgroundSelected }]}>
         {doc.uri ? <Image source={{ uri: doc.uri }} style={styles.thumbImg} contentFit="cover" /> : null}
       </View>
       <View style={styles.body}>
-        <ThemedText type="smallBold">{doc.label}</ThemedText>
+        <ThemedText type="smallBold">{t(`docLabel_${doc.key}` as StringKey)}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          {doc.owner === 'camion' ? 'Camion' : 'Chauffeur'}
-          {doc.expiry ? ` · expire ${formatDate(doc.expiry)}` : ''}
+          {t(`docOwner_${doc.owner}` as StringKey)}
+          {doc.expiry ? ` · ${t('expires', { date: formatDate(doc.expiry, lang) })}` : ''}
         </ThemedText>
-        <Badge label={status.label} color={status.color} />
+        <Badge label={t(`doc_${doc.status}` as StringKey)} color={DOC_STATUS_COLOR[doc.status]} />
       </View>
       <View style={styles.actions}>
-        {actionLabel && onAction ? (
+        {busy ? <ActivityIndicator /> : null}
+        {!busy && actionLabel && onAction ? (
           <Pressable onPress={onAction} hitSlop={8}>
             <ThemedText type="smallBold" themeColor="info">{actionLabel}</ThemedText>
           </Pressable>
         ) : null}
-        {secondaryLabel && onSecondary ? (
+        {!busy && secondaryLabel && onSecondary ? (
           <Pressable onPress={onSecondary} hitSlop={8}>
             <ThemedText type="smallBold" themeColor="danger">{secondaryLabel}</ThemedText>
           </Pressable>
@@ -53,5 +57,5 @@ const styles = StyleSheet.create({
   thumb: { width: 48, height: 48, borderRadius: Radius.sm, overflow: 'hidden' },
   thumbImg: { width: '100%', height: '100%' },
   body: { flex: 1, gap: 4 },
-  actions: { alignItems: 'flex-end', gap: 6 },
+  actions: { alignItems: 'flex-end', gap: 6, minWidth: 64 },
 });

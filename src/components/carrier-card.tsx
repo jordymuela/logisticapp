@@ -5,24 +5,26 @@ import { Badge } from '@/components/badge';
 import { Card } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
 import type { Carrier } from '@/domain/types';
-import { CARRIER_STATUS } from '@/utils/format';
+import { useI18n } from '@/i18n';
+import type { StringKey } from '@/i18n/strings';
+import { CARRIER_STATUS_COLOR } from '@/utils/format';
 
 export function CarrierCard({ carrier }: { carrier: Carrier }) {
-  const status = CARRIER_STATUS[carrier.status];
+  const { t } = useI18n();
   const verified = carrier.docs.filter((d) => d.status === 'verifie').length;
   const missing = carrier.docs.filter((d) => d.status === 'manquant').length;
   return (
     <Card onPress={() => router.push(`/carrier/${carrier.id}`)}>
       <View style={styles.top}>
         <ThemedText style={styles.name}>{carrier.company}</ThemedText>
-        <Badge label={status.label} color={status.color} />
+        <Badge label={t(`carrier_${carrier.status}` as StringKey)} color={CARRIER_STATUS_COLOR[carrier.status]} />
       </View>
       <ThemedText type="small" themeColor="textSecondary">
-        {carrier.truckType} · {carrier.truckPlate} · base {carrier.base}
+        {carrier.truckType} · {carrier.truckPlate} · {t('baseLine', { base: carrier.base })}
       </ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
-        Chauffeur {carrier.driverName} · documents vérifiés {verified}/{carrier.docs.length}
-        {missing ? ` · ${missing} manquant${missing > 1 ? 's' : ''}` : ''}
+        {t('driver')} {carrier.driverName} · {t('docsVerified', { v: verified, n: carrier.docs.length })}
+        {missing ? ` · ${t('missingCount', { n: missing })}` : ''}
       </ThemedText>
     </Card>
   );

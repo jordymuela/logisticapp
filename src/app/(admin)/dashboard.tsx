@@ -9,11 +9,13 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { ADMIN_FEE_USD, yearlyProjection } from '@/domain/pricing';
 import { useTheme } from '@/hooks/use-theme';
+import { useI18n } from '@/i18n';
 import { useStore } from '@/store/app-store';
 import { formatUSD } from '@/utils/format';
 
 export default function Dashboard() {
   const theme = useTheme();
+  const { t, lang } = useI18n();
   const { loads, carriers } = useStore();
   const billed = loads.filter((l) => l.status !== 'en_attente' && l.status !== 'rejete');
   const fees = billed.reduce((s, l) => s + l.adminFee, 0);
@@ -25,38 +27,36 @@ export default function Dashboard() {
   const pending = carriers.filter((c) => c.status === 'en_attente').length + loads.filter((l) => l.status === 'en_attente').length;
 
   return (
-    <Screen title="Tableau de bord" subtitle="Plateforme Corridor RDC">
+    <Screen title={t('dashboard')} subtitle={t('platform')}>
       <View style={styles.tiles}>
-        <KpiTile label="Chargements actifs" value={String(active)} color="info" />
-        <KpiTile label="Livrés" value={String(delivered)} color="success" />
-        <KpiTile label="Transporteurs approuvés" value={String(approved)} />
-        <KpiTile label="En attente de revue" value={String(pending)} color="warning" />
+        <KpiTile label={t('activeLoads')} value={String(active)} color="info" />
+        <KpiTile label={t('delivered')} value={String(delivered)} color="success" />
+        <KpiTile label={t('approvedCarriers')} value={String(approved)} />
+        <KpiTile label={t('pendingReview')} value={String(pending)} color="warning" />
       </View>
-      <SectionHeader title="Flux financiers (démo)" />
+      <SectionHeader title={t('financialFlows')} />
       <Card>
-        <Row label="Suppléments de gestion (plateforme)" value={formatUSD(fees)} strong />
-        <Row label="Primes d'assurance (assureur partenaire)" value={formatUSD(premiums)} />
-        <Row label="Paiements transport (propriétaires de camions)" value={formatUSD(transport)} />
-        <ThemedText type="small" themeColor="textSecondary">
-          Supplément fixe de {ADMIN_FEE_USD} USD par chargement validé. Le transport et la prime transitent directement entre les parties.
-        </ThemedText>
+        <Row label={t('feesRow')} value={formatUSD(fees, lang)} strong />
+        <Row label={t('premiumsRow')} value={formatUSD(premiums, lang)} />
+        <Row label={t('transportRow')} value={formatUSD(transport, lang)} />
+        <ThemedText type="small" themeColor="textSecondary">{t('feeNote', { fee: ADMIN_FEE_USD })}</ThemedText>
       </Card>
-      <SectionHeader title="Projection de revenus annuels" />
+      <SectionHeader title={t('projection')} />
       <View style={styles.tiles}>
         {[300, 500].map((n, i) => (
           <Card key={n} style={[styles.scenario, { borderColor: i === 0 ? theme.info : theme.accent }]}>
-            <ThemedText type="smallBold" themeColor={i === 0 ? 'info' : 'accent'}>Scénario {i + 1}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">{n} chargements / mois</ThemedText>
-            <ThemedText style={styles.big}>{formatUSD(yearlyProjection(n))}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">par an</ThemedText>
+            <ThemedText type="smallBold" themeColor={i === 0 ? 'info' : 'accent'}>{t('scenario', { n: i + 1 })}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">{t('loadsPerMonth', { n })}</ThemedText>
+            <ThemedText style={styles.big}>{formatUSD(yearlyProjection(n), lang)}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">{t('perYear')}</ThemedText>
           </Card>
         ))}
       </View>
-      <SectionHeader title="Corridors couverts" />
+      <SectionHeader title={t('corridors')} />
       <Card>
         <ThemedText type="small">Banana / Boma / Matadi → Kinshasa</ThemedText>
         <ThemedText type="small">Kinshasa → Lubumbashi → Kolwezi</ThemedText>
-        <ThemedText type="small">Kolwezi / Lubumbashi → Kasumbalesa (Zambie)</ThemedText>
+        <ThemedText type="small">Kolwezi / Lubumbashi → Kasumbalesa</ThemedText>
         <ThemedText type="small">Dundo (Angola) → Kasaï → Kinshasa</ThemedText>
       </Card>
       <RoleFooter />

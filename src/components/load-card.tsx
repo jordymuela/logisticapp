@@ -7,16 +7,18 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { quoteTotal } from '@/domain/pricing';
 import type { Load } from '@/domain/types';
-import { LOAD_STATUS, formatDate, formatUSD } from '@/utils/format';
+import { useI18n } from '@/i18n';
+import type { StringKey } from '@/i18n/strings';
+import { LOAD_STATUS_COLOR, formatDate, formatUSD } from '@/utils/format';
 
 export function LoadCard({ load, showShipper, priceMode = 'total' }: { load: Load; showShipper?: boolean; priceMode?: 'total' | 'truck' }) {
-  const status = LOAD_STATUS[load.status];
+  const { t, lang } = useI18n();
   const price = priceMode === 'truck' ? load.truckPrice : quoteTotal(load);
   return (
     <Card onPress={() => router.push(`/load/${load.id}`)}>
       <View style={styles.top}>
         <ThemedText type="code" themeColor="textSecondary">{load.reference}</ThemedText>
-        <Badge label={status.label} color={status.color} />
+        <Badge label={t(`status_${load.status}` as StringKey)} color={LOAD_STATUS_COLOR[load.status]} />
       </View>
       <ThemedText style={styles.route}>
         {load.origin} → {load.destination}
@@ -26,9 +28,9 @@ export function LoadCard({ load, showShipper, priceMode = 'total' }: { load: Loa
       </ThemedText>
       <View style={styles.bottom}>
         <ThemedText type="small" themeColor="textSecondary">
-          {showShipper ? load.shipperName : `Échéance ${formatDate(load.deadline)}`}
+          {showShipper ? load.shipperName : t('deadlineShort', { date: formatDate(load.deadline, lang) })}
         </ThemedText>
-        <ThemedText type="smallBold">{formatUSD(price)}</ThemedText>
+        <ThemedText type="smallBold">{formatUSD(price, lang)}</ThemedText>
       </View>
     </Card>
   );
